@@ -87,6 +87,11 @@ legend{font-size:12px;font-weight:600;color:var(--tinta-2);padding:0 6px}
 .niveis h3{font-size:12px;margin:0 0 6px;color:var(--tinta-2);font-weight:600}
 .niveis input{margin-bottom:5px}
 
+.cats{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
+.cat-bt{font-size:13px;padding:6px 11px;background:#fff;color:var(--tinta);
+  border:1px solid var(--linha);border-radius:20px;cursor:pointer}
+.cat-bt:hover{background:var(--ouro-fraco);border-color:var(--ouro)}
+.cat-bt.cancelar{color:var(--tinta-2);border-style:dashed}
 #aviso{margin:16px 0 0;padding:10px 14px;border-radius:8px;font-size:13px;display:none}
 #aviso ul{margin:6px 0 0;padding-left:18px}
 #aviso.ruim{display:block;background:var(--erro-bg);color:var(--erro);border:1px solid #E7C4C4}
@@ -106,7 +111,7 @@ legend{font-size:12px;font-weight:600;color:var(--tinta-2);padding:0 6px}
 <body>
 
 <header>
-  <h1>Palavra <span>Viva</span> — cadastro <small style="font-family:-apple-system,sans-serif;font-size:11px;font-weight:400;color:#7D8AA3;letter-spacing:0">v. 01/09 20h30</small></h1>
+  <h1>Palavra <span>Viva</span> — cadastro <small style="font-family:-apple-system,sans-serif;font-size:11px;font-weight:400;color:#7D8AA3;letter-spacing:0">v. 01/09 20h45</small></h1>
   <div style="display:flex;align-items:center;gap:14px">
     <div id="estado">desconectado</div>
     <button id="btBiblia" class="sec mini oculto">Bíblia: —</button>
@@ -195,6 +200,7 @@ legend{font-size:12px;font-weight:600;color:var(--tinta-2);padding:0 6px}
       <legend>Lacunas do Versículo maluco</legend>
       <div id="versoLac" class="verso"></div>
       <p class="dica">Clique numa palavra para abrir uma lacuna. Clique de novo para desfazer.</p>
+      <div id="escolha"></div>
     </fieldset>
 
     <fieldset>
@@ -269,7 +275,7 @@ const PONT = `.,;:!?"“”‘’()—`;
 
 let sb = null, bib = null, jornadas = [], versoes = [], livros = [], lista = [], filtro = "todos";
 let atual = null;   // registro em edição
-let palavras = [], lacunas = new Map(), cortes = new Set();
+let palavras = [], lacunas = new Map(), cortes = new Set(), escolhendo = null;
 
 const $ = id => document.getElementById(id);
 const limpar = p => { let a=0,b=p.length; while(a<b&&PONT.includes(p[a]))a++; while(b>a&&PONT.includes(p[b-1]))b--; return p.slice(a,b); };
@@ -530,7 +536,7 @@ montarDistratores();
 $("texto").oninput = lerTexto;
 function lerTexto() {
   const novas = $("texto").value.trim().split(/\s+/).filter(Boolean);
-  if (novas.join(" ") !== palavras.join(" ")) { lacunas = new Map(); cortes = new Set(); }
+  if (novas.join(" ") !== palavras.join(" ")) { lacunas = new Map(); cortes = new Set(); escolhendo = null; }
   palavras = novas; desenhar(); validar();
 }
 
@@ -542,6 +548,25 @@ function desenhar() {
     `<span class="pal ${lacunas.has(i) ? "lac" : ""}" data-i="${i}">${p}${
       lacunas.has(i) ? `<span class="cat">${lacunas.get(i)}</span>` : ""}</span>`).join(" ");
   lac.querySelectorAll(".pal").forEach(el => el.onclick = () => alternarLacuna(+el.dataset.i));
+
+  const painel = $("escolha");
+  if (escolhendo === null || !palavras[escolhendo]) {
+    painel.innerHTML = "";
+  } else {
+    painel.innerHTML = `<p class="dica" style="margin:10px 0 6px">
+        Lacuna em <b style="font-family:'Cormorant Garamond',serif;font-size:18px">${palavras[escolhendo]}</b>
+        — o que a criança deve escrever no lugar?</p>
+      <div class="cats">${CATEGORIAS.map(c =>
+        `<button type="button" class="cat-bt" data-c="${c}">${c}</button>`).join("")}
+        <button type="button" class="cat-bt" data-c="__">outra…</button>
+        <button type="button" class="cat-bt cancelar" data-c="">cancelar</button></div>`;
+    painel.querySelectorAll(".cat-bt").forEach(b => b.onclick = e => {
+      e.stopPropagation();
+      const c = b.dataset.c;
+      if (!c) { escolhendo = null; desenhar(); return; }
+      definirLacuna(c);
+    });
+  }
 
   blc.innerHTML = palavras.map((p, i) =>
     `<span class="pal">${p}</span>` + (i < palavras.length - 1
@@ -564,19 +589,20 @@ function blocos() {
 }
 
 function alternarLacuna(i) {
-  if (lacunas.has(i)) { lacunas.delete(i); desenhar(); validar(); return; }
-  const sel = document.createElement("select");
-  sel.innerHTML = `<option value="">escolha a categoria…</option>` +
-    CATEGORIAS.map(c => `<option>${c}</option>`).join("") + `<option value="__">outra…</option>`;
-  const alvo = $("versoLac").querySelector(`[data-i="${i}"]`);
-  alvo.replaceChildren(sel); sel.focus();
-  sel.onchange = () => {
-    let c = sel.value;
-    if (c === "__") c = prompt("Como a criança deve preencher esta lacuna?", "um animal") || "";
-    if (c) lacunas.set(i, c);
-    desenhar(); validar();
-  };
-  sel.onblur = () => setTimeout(() => { if (!lacunas.has(i)) { desenhar(); } }, 120);
+  if (lacunas.has(i)) { lacunas.delete(i); escolhendo = null; desenhar(); validar(); return; }
+  escolhendo = i; desenhar();
+  const p = $("escolha"); if (p) p.scrollIntoView({ block: "nearest" });
+}
+
+function definirLacuna(cat) {
+  if (escolhendo === null) return;
+  if (cat === "__") {
+    const c = prompt("Como a criança deve preencher esta lacuna?", "um animal");
+    if (!c) { escolhendo = null; desenhar(); return; }
+    cat = c.trim();
+  }
+  lacunas.set(escolhendo, cat);
+  escolhendo = null; desenhar(); validar();
 }
 
 $("btAuto").onclick = () => {
