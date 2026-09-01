@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Palavra Viva — cadastro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0F1B33; --navy-claro:#1D2E4F;
+  --ouro:#C9A227; --ouro-fraco:#F0E4BC;
+  --papel:#F6F3EC; --papel-2:#FFFFFF;
+  --tinta:#1B1B1B; --tinta-2:#5A5A54;
+  --linha:#DCD6C7;
+  --erro:#A32D2D; --erro-bg:#FCEBEB;
+  --ok:#3B6D11; --ok-bg:#EAF3DE;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--papel);color:var(--tinta);
+  font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+header{background:var(--navy);color:#fff;padding:14px 22px;display:flex;
+  align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+header h1{font-family:Cinzel,serif;font-size:19px;font-weight:500;margin:0;letter-spacing:.02em}
+header h1 span{color:var(--ouro)}
+#estado{font-size:13px;color:#B9C2D2}
+#estado.on{color:var(--ouro)}
+main{display:grid;grid-template-columns:290px minmax(0,1fr);gap:20px;
+  padding:20px;max-width:1180px;margin:0 auto;align-items:start}
+@media(max-width:860px){main{grid-template-columns:1fr}}
+
+.painel{background:var(--papel-2);border:1px solid var(--linha);border-radius:10px;padding:16px}
+.painel h2{font-size:13px;font-weight:600;margin:0 0 12px;color:var(--tinta-2)}
+
+label{display:block;font-size:12px;font-weight:600;color:var(--tinta-2);margin:12px 0 4px}
+input[type=text],textarea,select{width:100%;padding:8px 10px;border:1px solid var(--linha);
+  border-radius:6px;background:#fff;font:inherit;font-size:14px;color:var(--tinta)}
+textarea{font-family:"Cormorant Garamond",serif;font-size:19px;line-height:1.5;resize:vertical}
+input:focus,textarea:focus,select:focus{outline:2px solid var(--ouro);outline-offset:-1px;border-color:var(--ouro)}
+button{font:inherit;font-size:14px;padding:8px 14px;border-radius:6px;border:1px solid var(--navy);
+  background:var(--navy);color:#fff;cursor:pointer}
+button:hover{background:var(--navy-claro)}
+button.sec{background:#fff;color:var(--navy)}
+button.sec:hover{background:var(--papel)}
+button.mini{font-size:12px;padding:5px 9px}
+button.perigo{background:#fff;color:var(--erro);border-color:#E7C4C4}
+button:focus-visible{outline:2px solid var(--ouro);outline-offset:2px}
+
+#lista{max-height:62vh;overflow:auto;margin:0 -6px}
+.item{padding:8px 10px;border-radius:6px;cursor:pointer;display:flex;
+  justify-content:space-between;gap:8px;align-items:baseline}
+.item:hover{background:var(--papel)}
+.item.sel{background:var(--ouro-fraco)}
+.item b{font-weight:600;font-size:13px}
+.item i{font-style:normal;font-size:11px;color:var(--tinta-2)}
+.pend{color:#8A6D1F}
+.filtros{display:flex;gap:6px;margin-bottom:10px}
+.filtros button{flex:1;font-size:12px;padding:6px 4px;background:#fff;color:var(--tinta-2);border-color:var(--linha)}
+.filtros button.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+
+.faixa{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end}
+.faixa>div{flex:1;min-width:150px}
+.checks{display:flex;gap:14px;flex-wrap:wrap;margin-top:6px}
+.checks label{display:flex;align-items:center;gap:6px;margin:0;font-size:14px;font-weight:400;color:var(--tinta)}
+.checks input{margin:0}
+
+.verso{font-family:"Cormorant Garamond",serif;font-size:22px;line-height:2.1;
+  background:var(--papel);border:1px solid var(--linha);border-radius:8px;padding:14px 12px}
+.pal{padding:2px 3px;border-radius:4px;cursor:pointer;border-bottom:2px solid transparent}
+.pal:hover{border-bottom-color:var(--ouro)}
+.pal.lac{background:var(--ouro-fraco);border-bottom-color:var(--ouro)}
+.pal .cat{display:block;font-family:-apple-system,sans-serif;font-size:10px;
+  color:#8A6D1F;line-height:1.2;text-align:center}
+.corte{display:inline-block;width:12px;cursor:pointer;text-align:center;color:transparent}
+.corte:hover{color:var(--linha)}
+.corte.on{color:var(--ouro);font-weight:700}
+.dica{font-size:12px;color:var(--tinta-2);margin:6px 0 0}
+.blocos{margin-top:8px;display:flex;flex-direction:column;gap:4px}
+.bloco{font-family:"Cormorant Garamond",serif;font-size:17px;background:#fff;
+  border:1px solid var(--linha);border-left:3px solid var(--ouro);padding:4px 10px}
+.bloco span{font-family:-apple-system,sans-serif;font-size:11px;color:var(--tinta-2);margin-left:8px}
+
+fieldset{border:1px solid var(--linha);border-radius:8px;padding:12px 14px;margin:18px 0 0}
+legend{font-size:12px;font-weight:600;color:var(--tinta-2);padding:0 6px}
+.niveis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.niveis h3{font-size:12px;margin:0 0 6px;color:var(--tinta-2);font-weight:600}
+.niveis input{margin-bottom:5px}
+
+#aviso{margin:16px 0 0;padding:10px 14px;border-radius:8px;font-size:13px;display:none}
+#aviso ul{margin:6px 0 0;padding-left:18px}
+#aviso.ruim{display:block;background:var(--erro-bg);color:var(--erro);border:1px solid #E7C4C4}
+#aviso.bom{display:block;background:var(--ok-bg);color:var(--ok);border:1px solid #C6DCA6}
+#aviso.morno{display:block;background:#FAEEDA;color:#854F0B;border:1px solid #EBD5A8}
+
+.acoes{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap;align-items:center}
+.acoes .dir{margin-left:auto}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:-70px;background:var(--navy);
+  color:#fff;padding:11px 22px;border-radius:8px;font-size:14px;transition:bottom .25s;z-index:9}
+#toast.on{bottom:24px}
+#config{max-width:520px;margin:60px auto}
+.oculto{display:none}
+@media(prefers-reduced-motion:reduce){#toast{transition:none}}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Palavra <span>Viva</span> — cadastro <small style="font-family:-apple-system,sans-serif;font-size:11px;font-weight:400;color:#7D8AA3;letter-spacing:0">v. 01/09 18h50</small></h1>
+  <div style="display:flex;align-items:center;gap:14px">
+    <div id="estado">desconectado</div>
+    <button id="btSair" class="sec mini oculto">Sair</button>
+  </div>
+</header>
+
+<section id="config" class="painel">
+  <h2>Entrar</h2>
+  <label for="cfgUrl">URL do projeto</label>
+  <input type="text" id="cfgUrl" placeholder="https://xxxxxxxx.supabase.co">
+  <label for="cfgKey">Chave publicável (sb_publishable_… ou anon)</label>
+  <input type="text" id="cfgKey" placeholder="sb_publishable_...">
+  <label for="cfgEmail">Seu e-mail</label>
+  <input type="text" id="cfgEmail" autocomplete="username">
+  <label for="cfgSenha">Senha</label>
+  <input type="password" id="cfgSenha" autocomplete="current-password">
+
+  <fieldset style="margin-top:18px">
+    <legend>Banco da Bíblia</legend>
+    <p class="dica" style="margin-top:0">De onde vem o texto dos versículos. É o projeto do app Leitura da Bíblia.</p>
+    <label for="cfgBibUrl">URL</label>
+    <input type="text" id="cfgBibUrl" placeholder="https://gehoznuzimebjdqxhtia.supabase.co">
+    <label for="cfgBibKey">Chave publicável desse projeto</label>
+    <input type="text" id="cfgBibKey" placeholder="sb_publishable_...">
+  </fieldset>
+
+  <p class="dica">A URL e as chaves ficam guardadas neste navegador; a senha, não.</p>
+  <div class="acoes"><button id="btConectar">Entrar</button></div>
+</section>
+
+<main id="app" class="oculto">
+  <aside class="painel">
+    <h2>Versículos</h2>
+    <div class="filtros">
+      <button data-f="todos" class="on">Todos</button>
+      <button data-f="pendentes">Pendentes</button>
+      <button data-f="aprovados">Prontos</button>
+    </div>
+    <div id="lista"></div>
+    <div class="acoes"><button id="btNovo" class="sec">Novo versículo</button></div>
+    <div class="acoes" style="margin-top:6px">
+      <button id="btLote" class="sec mini">Trazer todos os textos da Bíblia</button>
+    </div>
+    <div id="relatorio"></div>
+  </aside>
+
+  <section class="painel">
+    <div class="faixa">
+      <div>
+        <label for="ref">Referência</label>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="ref" placeholder="João 3:16">
+          <button id="btBuscar" class="sec" type="button" style="white-space:nowrap">Buscar texto</button>
+        </div>
+      </div>
+      <div style="flex:0 0 130px">
+        <label for="dif">Dificuldade</label>
+        <select id="dif">
+          <option value="1">1 — fácil</option>
+          <option value="2" selected>2 — média</option>
+          <option value="3">3 — difícil</option>
+        </select>
+      </div>
+      <div style="flex:0 0 160px">
+        <label for="jornada">Jornada</label>
+        <select id="jornada"></select>
+      </div>
+      <div style="flex:0 0 150px">
+        <label for="versao">Versão</label>
+        <select id="versao"></select>
+      </div>
+    </div>
+
+    <label for="texto">Texto do versículo</label>
+    <textarea id="texto" rows="3" placeholder="Cole aqui o texto conferido na sua base."></textarea>
+
+    <label>Modos de jogo</label>
+    <div class="checks">
+      <label><input type="checkbox" id="mMaluco" checked> Versículo maluco</label>
+      <label><input type="checkbox" id="mQuem" checked> Quem disse</label>
+      <label><input type="checkbox" id="mOrdem" checked> Palavras em ordem</label>
+    </div>
+
+    <fieldset>
+      <legend>Lacunas do Versículo maluco</legend>
+      <div id="versoLac" class="verso"></div>
+      <p class="dica">Clique numa palavra para abrir uma lacuna. Clique de novo para desfazer.</p>
+    </fieldset>
+
+    <fieldset>
+      <legend>Blocos do Palavras em ordem</legend>
+      <div id="versoBlc" class="verso"></div>
+      <p class="dica">Clique nos espaços entre as palavras para cortar o versículo em linhas.
+        <button id="btAuto" class="sec mini" type="button">Cortar pela pontuação</button></p>
+      <div id="blocos" class="blocos"></div>
+    </fieldset>
+
+    <fieldset id="fsQuem">
+      <legend>Quem disse</legend>
+      <div class="faixa">
+        <div><label for="personagem">Quem falou</label><input type="text" id="personagem" placeholder="Jesus"></div>
+        <div><label for="aquem">A quem</label><input type="text" id="aquem" placeholder="a Tomé"></div>
+      </div>
+      <label for="contexto">Contexto que aparece depois da resposta</label>
+      <input type="text" id="contexto" placeholder="No cenáculo, respondendo a quem disse não saber para onde ele ia.">
+      <div class="niveis" style="margin-top:14px">
+        <div><h3>Fácil — épocas distantes</h3><div id="dFacil"></div></div>
+        <div><h3>Médio — mesmo período</h3><div id="dMedio"></div></div>
+        <div><h3>Difícil — mesma cena</h3><div id="dDificil"></div></div>
+      </div>
+    </fieldset>
+
+    <div id="aviso"></div>
+
+    <div class="acoes">
+      <button id="btSalvar">Salvar rascunho</button>
+      <button id="btAprovar" class="sec">Salvar e liberar para o jogo</button>
+      <button id="btExcluir" class="perigo mini dir">Excluir</button>
+    </div>
+  </section>
+</main>
+
+<div id="toast"></div>
+<div id="falha" style="display:none;margin:20px;padding:14px 16px;border-radius:8px;
+  background:#FCEBEB;color:#A32D2D;border:1px solid #E7C4C4;font-size:14px"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+window.onerror = function (msg, arq, lin) {
+  var f = document.getElementById("falha");
+  f.style.display = "block";
+  f.textContent = "A página encontrou um problema: " + msg + " (linha " + lin + ")";
+};
+if (location.protocol === "file:") {
+  document.getElementById("falha").style.display = "block";
+  document.getElementById("falha").textContent =
+    "Esta página precisa ser aberta por um endereço https (GitHub Pages). Aberta direto do disco, o navegador bloqueia o login.";
+}
+if (!window.supabase || !window.supabase.createClient) {
+  document.getElementById("falha").style.display = "block";
+  document.getElementById("falha").textContent =
+    "Não consegui carregar a biblioteca do Supabase. Verifique a conexão com a internet e recarregue a página.";
+}
+var _criar = window.supabase ? window.supabase.createClient : null;
+var _clientes = {};
+function createClient(url, key, opts) {
+  var chave = url + "|" + ((opts && opts.db && opts.db.schema) || "public");
+  if (!_clientes[chave]) _clientes[chave] = _criar(url, key, opts);
+  return _clientes[chave];
+}
+
+const CATEGORIAS = ["um animal","uma comida","um lugar","um lugar da sua cidade","uma profissão",
+  "uma profissão no plural","uma parte do corpo","uma peça de roupa","um objeto da cozinha",
+  "um objeto que existe na sua casa","um móvel","uma cor","um número","um nome da nossa família",
+  "um adjetivo","um adjetivo feminino","um adjetivo no plural","um verbo no passado (ele ___)",
+  "um advérbio de modo","uma sensação","uma qualidade","um período do dia","um dia da semana",
+  "um grupo no plural","algo que ilumina","algo escuro"];
+const PONT = `.,;:!?"“”‘’()—`;
+
+let sb = null, bib = null, jornadas = [], versoes = [], livros = [], lista = [], filtro = "todos";
+let atual = null;   // registro em edição
+let palavras = [], lacunas = new Map(), cortes = new Set();
+
+const $ = id => document.getElementById(id);
+const limpar = p => { let a=0,b=p.length; while(a<b&&PONT.includes(p[a]))a++; while(b>a&&PONT.includes(p[b-1]))b--; return p.slice(a,b); };
+const toast = m => { const t=$("toast"); t.textContent=m; t.classList.add("on"); setTimeout(()=>t.classList.remove("on"),2200); };
+
+/* ---------- conexão ---------- */
+$("btConectar").onclick = entrar;
+$("cfgSenha").onkeydown = e => { if (e.key === "Enter") entrar(); };
+$("btSair").onclick = async () => { if (sb) await sb.auth.signOut(); location.reload(); };
+
+async function retomarSessao() {
+  const salvo = JSON.parse(localStorage.getItem("pv_cfg") || "null");
+  if (!salvo) return;
+  $("cfgUrl").value = salvo.url; $("cfgKey").value = salvo.key;
+  $("cfgEmail").value = salvo.email || "";
+  $("cfgBibUrl").value = salvo.bUrl || ""; $("cfgBibKey").value = salvo.bKey || "";
+  sb = createClient(salvo.url, salvo.key);
+  const { data } = await sb.auth.getSession();
+  if (data.session) await iniciar(); else $("cfgSenha").focus();
+}
+
+async function entrar() {
+  const url = $("cfgUrl").value.trim(), key = $("cfgKey").value.trim();
+  const email = $("cfgEmail").value.trim(), senha = $("cfgSenha").value;
+  const bUrl = $("cfgBibUrl").value.trim(), bKey = $("cfgBibKey").value.trim();
+  if (!url || !key || !email || !senha) { toast("Preencha os quatro campos de cima."); return; }
+  sb = createClient(url, key);
+  const { error } = await sb.auth.signInWithPassword({ email, password: senha });
+  if (error) { toast("Não entrou: " + error.message); return; }
+  localStorage.setItem("pv_cfg", JSON.stringify({ url, key, email, bUrl, bKey }));
+  $("cfgSenha").value = "";
+  await iniciar();
+}
+
+async function iniciar() {
+  const { data, error } = await sb.from("pv_jornadas").select("id,nome").order("ordem");
+  if (error) { toast("Erro ao carregar jornadas: " + error.message); return; }
+  jornadas = data;
+  $("jornada").innerHTML = data.map(j => `<option value="${j.id}">${j.nome}</option>`).join("");
+  const { data: u } = await sb.auth.getUser();
+  $("estado").textContent = u?.user?.email || "conectado"; $("estado").className = "on";
+  $("btSair").classList.remove("oculto");
+  $("config").classList.add("oculto"); $("app").classList.remove("oculto");
+  await ligarBiblia();
+  await carregarLista();
+}
+
+/* ---------- banco da Bíblia ---------- */
+async function ligarBiblia() {
+  const c = JSON.parse(localStorage.getItem("pv_cfg") || "{}");
+  if (!c.bUrl || !c.bKey) { $("versao").innerHTML = `<option>—</option>`; return; }
+  bib = createClient(c.bUrl, c.bKey, { db: { schema: "biblia" } });
+
+  const { data: vs, error: e1 } = await bib.from("versoes").select("*");
+  if (e1) { toast("Bíblia: " + e1.message); bib = null; return; }
+  versoes = vs;
+  $("versao").innerHTML = vs.map(v =>
+    `<option value="${v.id}" ${v.sigla === "BLIVRE" ? "selected" : ""}>${v.sigla}</option>`).join("");
+
+  const { data: lv } = await bib.from("livros").select("*");
+  livros = (lv || []).map(l => {
+    const id = l.id ?? l.livro_id ?? l.ordem_canonica;
+    const nomes = Object.values(l).filter(x => typeof x === "string" && x.length > 1).map(nz);
+    return { id, nomes };
+  });
+}
+
+function nz(s) {
+  return String(s).normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function lerRef(ref) {
+  const m = ref.trim().match(/^(.+?)\s+(\d+)\s*[:.]\s*(\d+)$/);
+  if (!m) return null;
+  const alvo = nz(m[1]);
+  let livro = livros.find(l => l.nomes.includes(alvo));
+  if (!livro) livro = livros.find(l => l.nomes.some(n => n.startsWith(alvo) && alvo.length >= 3));
+  if (!livro) return null;
+  return { livro_id: livro.id, capitulo: +m[2], versiculo: +m[3] };
+}
+
+async function buscarTexto(ref) {
+  if (!bib) return { erro: "Banco da Bíblia não configurado." };
+  const p = lerRef(ref);
+  if (!p) return { erro: "Não entendi a referência." };
+  const { data, error } = await bib.from("versiculos").select("texto")
+    .eq("versao_id", +$("versao").value).eq("livro_id", p.livro_id)
+    .eq("capitulo", p.capitulo).eq("versiculo", p.versiculo).limit(1);
+  if (error) return { erro: error.message };
+  if (!data.length) return { erro: "Versículo não encontrado nessa versão." };
+  return { texto: data[0].texto.trim().replace(/\s+/g, " ") };
+}
+
+$("btBuscar").onclick = async () => {
+  const r = await buscarTexto($("ref").value);
+  if (r.erro) { toast(r.erro); return; }
+  const antigas = [...lacunas.values()], palavrasAntigas = [...lacunas.keys()].map(i => palavras[i]);
+  $("texto").value = r.texto;
+  palavras = r.texto.split(" ");
+  lacunas = new Map(); cortes = new Set();
+  palavrasAntigas.forEach((p, k) => {
+    const alvo = nz(limpar(p || ""));
+    const i = palavras.findIndex((w, j) => nz(limpar(w)) === alvo && !lacunas.has(j));
+    if (i >= 0) lacunas.set(i, antigas[k]);
+  });
+  $("btAuto").click();
+  toast("Texto trazido da " + $("versao").selectedOptions[0].textContent + ".");
+};
+
+/* ---------- atualização em lote ---------- */
+$("btLote").onclick = async () => {
+  if (!bib) { toast("Configure o banco da Bíblia para usar isto."); return; }
+  const alvos = lista.filter(v => !v.aprovado);
+  if (!alvos.length) { toast("Nenhum rascunho para atualizar."); return; }
+  if (!confirm(`Trazer da ${$("versao").selectedOptions[0].textContent} o texto de ${alvos.length} versículo(s)?`)) return;
+
+  const linhas = [];
+  for (const v of alvos) {
+    const r = await buscarTexto(v.ref);
+    if (r.erro) { linhas.push([v.ref, r.erro, false]); continue; }
+    const pal = r.texto.split(" ");
+    const novas = [], perdidas = [];
+    (v.lacunas || []).forEach(l => {
+      const alvo = nz(l.palavra);
+      const i = pal.findIndex((w, j) => nz(limpar(w)) === alvo && !novas.some(n => n.pos === j));
+      if (i >= 0) novas.push({ pos: i, categoria: l.categoria, palavra: limpar(pal[i]), original: pal[i] });
+      else perdidas.push(l.palavra);
+    });
+    const blocos = [];
+    let atualB = [], desde = 0;
+    pal.forEach((p, i) => {
+      atualB.push(p);
+      const fim = p[p.length - 1];
+      if (i < pal.length - 1 && ",;:.".includes(fim) && i - desde >= 3) { blocos.push(atualB.join(" ")); atualB = []; desde = i; }
+    });
+    if (atualB.length) blocos.push(atualB.join(" "));
+
+    const { error } = await sb.from("pv_versiculos").update({
+      texto: r.texto, lacunas: novas,
+      blocos: v.modos.includes("ordem") ? blocos : []
+    }).eq("id", v.id);
+    linhas.push([v.ref, error ? error.message
+      : (perdidas.length ? "atualizado; conferir lacuna: " + perdidas.join(", ") : "atualizado"), !error && !perdidas.length]);
+  }
+  $("relatorio").innerHTML = `<p class="dica" style="margin-top:12px"><b>Resultado</b></p>` +
+    linhas.map(([r, m, ok]) => `<p class="dica" style="color:${ok ? "var(--ok)" : "#8A6D1F"}">${r} — ${m}</p>`).join("");
+  await carregarLista();
+  toast("Textos atualizados.");
+};
+
+/* ---------- lista ---------- */
+async function carregarLista() {
+  const { data, error } = await sb.from("pv_versiculos")
+    .select("id,ref,texto,aprovado,jornada_id,dificuldade,modos,quem_disse,lacunas,blocos")
+    .order("id");
+  if (error) { toast("Erro ao listar: " + error.message); return; }
+  lista = data; desenharLista();
+}
+
+function desenharLista() {
+  const vis = lista.filter(v => filtro === "todos" || (filtro === "pendentes" ? !v.aprovado : v.aprovado));
+  $("lista").innerHTML = vis.length ? vis.map(v => `
+    <div class="item ${atual && atual.id === v.id ? "sel" : ""}" data-id="${v.id}">
+      <b>${v.ref}</b><i class="${v.aprovado ? "" : "pend"}">${v.aprovado ? "no jogo" : "conferir"}</i>
+    </div>`).join("")
+    : `<p class="dica">Nada aqui ainda.</p>`;
+  [...$("lista").children].forEach(el => el.onclick = () => abrir(el.dataset.id));
+}
+document.querySelectorAll(".filtros button").forEach(b => b.onclick = () => {
+  filtro = b.dataset.f;
+  document.querySelectorAll(".filtros button").forEach(x => x.classList.toggle("on", x === b));
+  desenharLista();
+});
+
+/* ---------- editor ---------- */
+$("btNovo").onclick = () => { atual = null; limparForm(); desenharLista(); $("ref").focus(); };
+
+function limparForm() {
+  $("ref").value = ""; $("texto").value = ""; $("dif").value = "2";
+  $("mMaluco").checked = $("mQuem").checked = $("mOrdem").checked = true;
+  $("personagem").value = $("aquem").value = $("contexto").value = "";
+  lacunas = new Map(); cortes = new Set();
+  document.querySelectorAll("#dFacil input,#dMedio input,#dDificil input").forEach(i => i.value = "");
+  lerTexto();
+}
+
+function abrir(id) {
+  const v = lista.find(x => x.id === id); if (!v) return;
+  atual = v;
+  $("ref").value = v.ref; $("texto").value = v.texto; $("dif").value = v.dificuldade;
+  $("jornada").value = v.jornada_id;
+  $("mMaluco").checked = v.modos.includes("maluco");
+  $("mQuem").checked = v.modos.includes("quem");
+  $("mOrdem").checked = v.modos.includes("ordem");
+  const q = v.quem_disse || {};
+  $("personagem").value = q.personagem || ""; $("aquem").value = q.a_quem || "";
+  $("contexto").value = q.contexto || "";
+  const niveis = { facil: "dFacil", medio: "dMedio", dificil: "dDificil" };
+  Object.entries(niveis).forEach(([nivel, id]) => {
+    const arr = ((q.distratores || {})[nivel]) || [];
+    $(id).querySelectorAll("input").forEach((inp, i) => inp.value = arr[i] || "");
+  });
+  palavras = v.texto.trim().split(/\s+/);
+  lacunas = new Map((v.lacunas || []).map(l => [l.pos, l.categoria]));
+  cortes = new Set(); let n = 0;
+  (v.blocos || []).slice(0, -1).forEach(b => { n += b.trim().split(/\s+/).length; cortes.add(n - 1); });
+  desenhar(); desenharLista(); validar();
+}
+
+function montarDistratores() {
+  ["dFacil","dMedio","dDificil"].forEach(id => {
+    $(id).innerHTML = [0,1,2].map(() => `<input type="text" placeholder="outro personagem">`).join("");
+    $(id).querySelectorAll("input").forEach(i => i.oninput = validar);
+  });
+}
+montarDistratores();
+
+$("texto").oninput = lerTexto;
+function lerTexto() {
+  const novas = $("texto").value.trim().split(/\s+/).filter(Boolean);
+  if (novas.join(" ") !== palavras.join(" ")) { lacunas = new Map(); cortes = new Set(); }
+  palavras = novas; desenhar(); validar();
+}
+
+function desenhar() {
+  const lac = $("versoLac"), blc = $("versoBlc");
+  if (!palavras.length) { lac.innerHTML = blc.innerHTML = `<span class="dica">Cole o texto acima.</span>`; $("blocos").innerHTML=""; return; }
+
+  lac.innerHTML = palavras.map((p, i) =>
+    `<span class="pal ${lacunas.has(i) ? "lac" : ""}" data-i="${i}">${p}${
+      lacunas.has(i) ? `<span class="cat">${lacunas.get(i)}</span>` : ""}</span>`).join(" ");
+  lac.querySelectorAll(".pal").forEach(el => el.onclick = () => alternarLacuna(+el.dataset.i));
+
+  blc.innerHTML = palavras.map((p, i) =>
+    `<span class="pal">${p}</span>` + (i < palavras.length - 1
+      ? `<span class="corte ${cortes.has(i) ? "on" : ""}" data-i="${i}">|</span>` : "")).join("");
+  blc.querySelectorAll(".corte").forEach(el => el.onclick = () => {
+    const i = +el.dataset.i; cortes.has(i) ? cortes.delete(i) : cortes.add(i); desenhar(); validar();
+  });
+
+  const bs = blocos();
+  $("blocos").innerHTML = bs.length > 1 ? bs.map(b =>
+    `<div class="bloco">${b}<span>${b.split(/\s+/).length} palavras</span></div>`).join("") : "";
+}
+
+function blocos() {
+  if (!palavras.length) return [];
+  const out = []; let atualB = [];
+  palavras.forEach((p, i) => { atualB.push(p); if (cortes.has(i)) { out.push(atualB.join(" ")); atualB = []; } });
+  if (atualB.length) out.push(atualB.join(" "));
+  return out;
+}
+
+function alternarLacuna(i) {
+  if (lacunas.has(i)) { lacunas.delete(i); desenhar(); validar(); return; }
+  const sel = document.createElement("select");
+  sel.innerHTML = `<option value="">escolha a categoria…</option>` +
+    CATEGORIAS.map(c => `<option>${c}</option>`).join("") + `<option value="__">outra…</option>`;
+  const alvo = $("versoLac").querySelector(`[data-i="${i}"]`);
+  alvo.replaceChildren(sel); sel.focus();
+  sel.onchange = () => {
+    let c = sel.value;
+    if (c === "__") c = prompt("Como a criança deve preencher esta lacuna?", "um animal") || "";
+    if (c) lacunas.set(i, c);
+    desenhar(); validar();
+  };
+  sel.onblur = () => setTimeout(() => { if (!lacunas.has(i)) { desenhar(); } }, 120);
+}
+
+$("btAuto").onclick = () => {
+  cortes = new Set(); let desde = 0;
+  palavras.forEach((p, i) => {
+    if (i === palavras.length - 1) return;
+    const fim = p[p.length - 1];
+    if ((fim === "," || fim === ";" || fim === ":" || fim === ".") && i - desde >= 3) { cortes.add(i); desde = i; }
+  });
+  desenhar(); validar();
+};
+
+[$("mMaluco"), $("mQuem"), $("mOrdem"), $("ref"), $("personagem"), $("aquem"), $("contexto")]
+  .forEach(el => el.oninput = el.onchange = validar);
+
+/* ---------- validação ---------- */
+function distratores(nivel) {
+  const id = { facil: "dFacil", medio: "dMedio", dificil: "dDificil" }[nivel];
+  return [...$(id).querySelectorAll("input")].map(i => i.value.trim()).filter(Boolean);
+}
+function modos() {
+  return [$("mMaluco").checked && "maluco", $("mQuem").checked && "quem", $("mOrdem").checked && "ordem"].filter(Boolean);
+}
+
+function validar() {
+  const erros = [], avisos = [], m = modos();
+  if (!$("ref").value.trim()) erros.push("Falta a referência.");
+  if (!palavras.length) erros.push("Falta o texto do versículo.");
+  if (!m.length) erros.push("Escolha ao menos um modo de jogo.");
+
+  if (m.includes("maluco")) {
+    if (!lacunas.size) erros.push("O Versículo maluco precisa de pelo menos uma lacuna.");
+    if (lacunas.size > 4) avisos.push("Mais de quatro lacunas deixam o versículo irreconhecível.");
+  }
+  if (m.includes("ordem")) {
+    const bs = blocos();
+    if (palavras.length < 5) erros.push("Texto curto demais para embaralhar — desmarque Palavras em ordem.");
+    const maior = bs.reduce((a, b) => Math.max(a, b.split(/\s+/).length), 0);
+    if (maior > 10) avisos.push(`Há um bloco com ${maior} palavras; acima de dez trava no celular.`);
+  }
+  if (m.includes("quem")) {
+    if (!$("personagem").value.trim()) erros.push("Diga quem falou.");
+    ["facil", "medio", "dificil"].forEach(n => {
+      const d = distratores(n), nome = { facil: "Fácil", medio: "Médio", dificil: "Difícil" }[n];
+      if (d.length !== 3) erros.push(`${nome}: faltam ${3 - d.length} personagem(ns).`);
+      if (new Set(d).size !== d.length) erros.push(`${nome}: há nome repetido.`);
+      if (d.includes($("personagem").value.trim())) erros.push(`${nome}: repete quem realmente falou.`);
+    });
+    if (!$("contexto").value.trim()) avisos.push("Sem contexto, a resposta não ensina nada depois do acerto.");
+  }
+
+  const av = $("aviso");
+  if (erros.length) {
+    av.className = "ruim";
+    av.innerHTML = "Falta resolver:<ul>" + erros.map(e => `<li>${e}</li>`).join("") + "</ul>";
+  } else if (avisos.length) {
+    av.className = "morno";
+    av.innerHTML = "Pode salvar, mas repare:<ul>" + avisos.map(e => `<li>${e}</li>`).join("") + "</ul>";
+  } else if (palavras.length) {
+    av.className = "bom"; av.textContent = "Tudo certo para entrar no jogo.";
+  } else { av.className = ""; av.textContent = ""; }
+  return erros.length === 0;
+}
+
+/* ---------- salvar ---------- */
+async function salvar(aprovado) {
+  if (!validar()) { toast("Resolva os pontos em vermelho."); return; }
+  const m = modos(), texto = palavras.join(" ");
+  const registro = {
+    id: atual ? atual.id : await novoId(),
+    jornada_id: $("jornada").value,
+    ref: $("ref").value.trim(),
+    texto, dificuldade: +$("dif").value, modos: m,
+    lacunas: [...lacunas.entries()].sort((a, b) => a[0] - b[0])
+      .map(([pos, categoria]) => ({ pos, categoria, palavra: limpar(palavras[pos]), original: palavras[pos] })),
+    blocos: m.includes("ordem") ? blocos() : [],
+    quem_disse: m.includes("quem") ? {
+      personagem: $("personagem").value.trim(),
+      a_quem: $("aquem").value.trim(),
+      contexto: $("contexto").value.trim(),
+      distratores: { facil: distratores("facil"), medio: distratores("medio"), dificil: distratores("dificil") }
+    } : null,
+    aprovado
+  };
+  const { error } = await sb.from("pv_versiculos").upsert(registro);
+  if (error) { toast("Não salvou: " + error.message); return; }
+  toast(aprovado ? "Liberado para o jogo." : "Rascunho salvo.");
+  await carregarLista();
+  atual = lista.find(v => v.id === registro.id) || null;
+  desenharLista();
+}
+
+async function novoId() {
+  const pref = $("jornada").value.split("-").map(p => p[0]).join("");
+  const usados = lista.filter(v => v.id.startsWith(pref + "-")).map(v => +v.id.split("-")[1] || 0);
+  return `${pref}-${String((usados.length ? Math.max(...usados) : 0) + 1).padStart(3, "0")}`;
+}
+
+$("btSalvar").onclick = () => salvar(false);
+$("btAprovar").onclick = () => salvar(true);
+$("btExcluir").onclick = async () => {
+  if (!atual) { toast("Nenhum versículo aberto."); return; }
+  if (!confirm(`Excluir ${atual.ref} de vez?`)) return;
+  const { error } = await sb.from("pv_versiculos").delete().eq("id", atual.id);
+  if (error) { toast("Não excluiu: " + error.message); return; }
+  atual = null; limparForm(); await carregarLista(); toast("Excluído.");
+};
+
+lerTexto();
+retomarSessao();
+</script>
+</body>
+</html>
