@@ -106,9 +106,10 @@ legend{font-size:12px;font-weight:600;color:var(--tinta-2);padding:0 6px}
 <body>
 
 <header>
-  <h1>Palavra <span>Viva</span> — cadastro <small style="font-family:-apple-system,sans-serif;font-size:11px;font-weight:400;color:#7D8AA3;letter-spacing:0">v. 01/09 18h50</small></h1>
+  <h1>Palavra <span>Viva</span> — cadastro <small style="font-family:-apple-system,sans-serif;font-size:11px;font-weight:400;color:#7D8AA3;letter-spacing:0">v. 01/09 20h30</small></h1>
   <div style="display:flex;align-items:center;gap:14px">
     <div id="estado">desconectado</div>
+    <button id="btBiblia" class="sec mini oculto">Bíblia: —</button>
     <button id="btSair" class="sec mini oculto">Sair</button>
   </div>
 </header>
@@ -277,6 +278,18 @@ const toast = m => { const t=$("toast"); t.textContent=m; t.classList.add("on");
 /* ---------- conexão ---------- */
 $("btConectar").onclick = entrar;
 $("cfgSenha").onkeydown = e => { if (e.key === "Enter") entrar(); };
+$("btBiblia").onclick = async () => {
+  const c = JSON.parse(localStorage.getItem("pv_cfg") || "{}");
+  const u = prompt("URL do projeto da Bíblia:", c.bUrl || "https://gehoznuzimebjdqxhtia.supabase.co");
+  if (u === null) return;
+  const k = prompt("Chave publicável desse projeto:", c.bKey || "");
+  if (k === null) return;
+  c.bUrl = u.trim().replace(/\/+$/, ""); c.bKey = k.trim();
+  localStorage.setItem("pv_cfg", JSON.stringify(c));
+  await ligarBiblia();
+  if (bib) toast("Banco da Bíblia conectado.");
+};
+
 $("btSair").onclick = async () => { if (sb) await sb.auth.signOut(); location.reload(); };
 
 async function retomarSessao() {
@@ -317,16 +330,43 @@ async function iniciar() {
 }
 
 /* ---------- banco da Bíblia ---------- */
+function diagnostico(txt) {
+  var f = $("falha");
+  f.style.display = txt ? "block" : "none";
+  f.textContent = txt || "";
+}
+
 async function ligarBiblia() {
   const c = JSON.parse(localStorage.getItem("pv_cfg") || "{}");
-  if (!c.bUrl || !c.bKey) { $("versao").innerHTML = `<option>—</option>`; return; }
-  bib = createClient(c.bUrl, c.bKey, { db: { schema: "biblia" } });
+  $("btBiblia").classList.remove("oculto");
+  bib = null;
+  $("versao").innerHTML = `<option>—</option>`;
 
-  const { data: vs, error: e1 } = await bib.from("versoes").select("*");
-  if (e1) { toast("Bíblia: " + e1.message); bib = null; return; }
+  if (!c.bUrl || !c.bKey) {
+    $("btBiblia").textContent = "Bíblia: configurar";
+    diagnostico("O banco da Bíblia está sem URL ou sem chave. Clique em \u201cBíblia: configurar\u201d no topo.");
+    return;
+  }
+
+  let cli = createClient(c.bUrl, c.bKey, { db: { schema: "biblia" } });
+  let r = await cli.from("versoes").select("*");
+  if (r.error) {
+    const r2 = await createClient(c.bUrl, c.bKey).from("versoes").select("*");
+    if (!r2.error) { cli = createClient(c.bUrl, c.bKey); r = r2; }
+    else {
+      $("btBiblia").textContent = "Bíblia: erro";
+      diagnostico("Banco da Bíblia (" + c.bUrl + "): " + r.error.message +
+        " — se falar em schema, abra Project Settings → Data API do projeto da Bíblia e inclua \u201cbiblia\u201d nos schemas expostos.");
+      return;
+    }
+  }
+  bib = cli;
+  diagnostico("");
+  const vs = r.data;
   versoes = vs;
   $("versao").innerHTML = vs.map(v =>
     `<option value="${v.id}" ${v.sigla === "BLIVRE" ? "selected" : ""}>${v.sigla}</option>`).join("");
+  $("btBiblia").textContent = "Bíblia: " + ($("versao").selectedOptions[0] ? $("versao").selectedOptions[0].textContent : "ok");
 
   const { data: lv } = await bib.from("livros").select("*");
   livros = (lv || []).map(l => {
