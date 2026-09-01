@@ -111,7 +111,7 @@ legend{font-size:12px;font-weight:600;color:var(--tinta-2);padding:0 6px}
 <body>
 
 <header>
-  <h1>Palavra <span>Viva</span> — cadastro <small style="font-family:-apple-system,sans-serif;font-size:11px;font-weight:400;color:#7D8AA3;letter-spacing:0">v. 01/09 20h45</small></h1>
+  <h1>Palavra <span>Viva</span> — cadastro <small style="font-family:-apple-system,sans-serif;font-size:11px;font-weight:400;color:#7D8AA3;letter-spacing:0">v. 01/09 21h05</small></h1>
   <div style="display:flex;align-items:center;gap:14px">
     <div id="estado">desconectado</div>
     <button id="btBiblia" class="sec mini oculto">Bíblia: —</button>
@@ -155,6 +155,9 @@ legend{font-size:12px;font-weight:600;color:var(--tinta-2);padding:0 6px}
     <div class="acoes"><button id="btNovo" class="sec">Novo versículo</button></div>
     <div class="acoes" style="margin-top:6px">
       <button id="btLote" class="sec mini">Trazer todos os textos da Bíblia</button>
+    </div>
+    <div class="acoes" style="margin-top:6px">
+      <button id="btRevisar" class="sec mini">Revisar e liberar de uma vez</button>
     </div>
     <div id="relatorio"></div>
   </aside>
@@ -227,6 +230,7 @@ legend{font-size:12px;font-weight:600;color:var(--tinta-2);padding:0 6px}
     </fieldset>
 
     <div id="aviso"></div>
+    <div id="painelLote" class="oculto"></div>
 
     <div class="acoes">
       <button id="btSalvar">Salvar rascunho</button>
@@ -437,12 +441,21 @@ $("btLote").onclick = async () => {
     const r = await buscarTexto(v.ref);
     if (r.erro) { linhas.push([v.ref, r.erro, false]); continue; }
     const pal = r.texto.split(" ");
-    const novas = [], perdidas = [];
+    const novas = [], trocadas = [];
+    const vazias = ["que","com","para","como","mas","por","dos","das","uma","dele","dela","este","esta","dize","dizer"];
+    const serve = j => j >= 0 && j < pal.length && limpar(pal[j]).length > 3
+      && !vazias.includes(nz(limpar(pal[j]))) && !novas.some(n => n.pos === j);
     (v.lacunas || []).forEach(l => {
       const alvo = nz(l.palavra);
-      const i = pal.findIndex((w, j) => nz(limpar(w)) === alvo && !novas.some(n => n.pos === j));
+      let i = pal.findIndex((w, j) => nz(limpar(w)) === alvo && !novas.some(n => n.pos === j));
+      if (i < 0) {
+        // a versao trocou a palavra: procura na mesma posicao e, se nao servir, na vizinhanca
+        const perto = [l.pos, l.pos + 1, l.pos - 1, l.pos + 2, l.pos - 2];
+        i = perto.find(serve);
+        if (i !== undefined && i >= 0) trocadas.push(l.palavra + " → " + limpar(pal[i]));
+        else i = -1;
+      }
       if (i >= 0) novas.push({ pos: i, categoria: l.categoria, palavra: limpar(pal[i]), original: pal[i] });
-      else perdidas.push(l.palavra);
     });
     const blocos = [];
     let atualB = [], desde = 0;
@@ -458,7 +471,8 @@ $("btLote").onclick = async () => {
       blocos: v.modos.includes("ordem") ? blocos : []
     }).eq("id", v.id);
     linhas.push([v.ref, error ? error.message
-      : (perdidas.length ? "atualizado; conferir lacuna: " + perdidas.join(", ") : "atualizado"), !error && !perdidas.length]);
+      : (trocadas.length ? "atualizado; lacuna reencaixada: " + trocadas.join(", ") : "atualizado"),
+      !error && !trocadas.length]);
   }
   $("relatorio").innerHTML = `<p class="dica" style="margin-top:12px"><b>Resultado</b></p>` +
     linhas.map(([r, m, ok]) => `<p class="dica" style="color:${ok ? "var(--ok)" : "#8A6D1F"}">${r} — ${m}</p>`).join("");
@@ -700,6 +714,46 @@ async function novoId() {
   const usados = lista.filter(v => v.id.startsWith(pref + "-")).map(v => +v.id.split("-")[1] || 0);
   return `${pref}-${String((usados.length ? Math.max(...usados) : 0) + 1).padStart(3, "0")}`;
 }
+
+/* ---------- revisão em lote ---------- */
+$("btRevisar").onclick = () => {
+  const pend = lista.filter(v => !v.aprovado);
+  const pl = $("painelLote");
+  pl.classList.remove("oculto");
+  if (!pend.length) { pl.innerHTML = `<p class="dica">Nada pendente — está tudo liberado.</p>`; return; }
+  pl.innerHTML = `<h2 style="margin:6px 0 4px">${pend.length} versículo(s) para conferir</h2>
+    <p class="dica">As palavras em dourado são as lacunas do Versículo maluco. Desmarque o que não quiser liberar.</p>
+    ${pend.map(v => {
+      const pal = v.texto.split(" ");
+      const marc = new Set((v.lacunas || []).map(l => l.pos));
+      const q = v.quem_disse;
+      return `<div style="border-top:1px solid var(--linha);padding:12px 0">
+        <label style="display:flex;gap:9px;align-items:flex-start;margin:0;font-weight:400">
+          <input type="checkbox" class="lote-ck" value="${v.id}" checked style="margin-top:5px">
+          <span style="flex:1">
+            <b style="font-size:13px;color:var(--ouro);letter-spacing:.04em">${v.ref}</b>
+            <span style="display:block;font-family:'Cormorant Garamond',serif;font-size:19px;line-height:1.5;margin:3px 0 5px">
+              ${pal.map((p, i) => marc.has(i)
+                ? `<span style="background:var(--ouro-fraco);border-radius:3px;padding:0 2px">${p}</span>` : p).join(" ")}</span>
+            <span class="dica" style="margin:0">${v.modos.join(" · ")}${q ? " · disse: " + q.personagem : ""}</span>
+          </span></label></div>`;
+    }).join("")}
+    <div class="acoes">
+      <button id="btLiberar">Liberar os marcados</button>
+      <button id="btFechaLote" class="sec">Fechar</button>
+    </div>`;
+  $("btFechaLote").onclick = () => pl.classList.add("oculto");
+  $("btLiberar").onclick = async () => {
+    const ids = [...pl.querySelectorAll(".lote-ck")].filter(c => c.checked).map(c => c.value);
+    if (!ids.length) { toast("Nenhum marcado."); return; }
+    if (!confirm(`Liberar ${ids.length} versículo(s) para o jogo?`)) return;
+    const { error } = await sb.from("pv_versiculos").update({ aprovado: true }).in("id", ids);
+    if (error) { toast("Não liberou: " + error.message); return; }
+    toast(ids.length + " liberado(s).");
+    await carregarLista();
+    $("btRevisar").click();
+  };
+};
 
 $("btSalvar").onclick = () => salvar(false);
 $("btAprovar").onclick = () => salvar(true);
