@@ -111,7 +111,7 @@ legend{font-size:12px;font-weight:600;color:var(--tinta-2);padding:0 6px}
 <body>
 
 <header>
-  <h1>Palavra <span>Viva</span> — cadastro <small style="font-family:-apple-system,sans-serif;font-size:11px;font-weight:400;color:#7D8AA3;letter-spacing:0">v. 01/09 21h05</small></h1>
+  <h1>Palavra <span>Viva</span> — cadastro <small style="font-family:-apple-system,sans-serif;font-size:11px;font-weight:400;color:#7D8AA3;letter-spacing:0">v. 01/09 21h35</small></h1>
   <div style="display:flex;align-items:center;gap:14px">
     <div id="estado">desconectado</div>
     <button id="btBiblia" class="sec mini oculto">Bíblia: —</button>
@@ -158,6 +158,12 @@ legend{font-size:12px;font-weight:600;color:var(--tinta-2);padding:0 6px}
     </div>
     <div class="acoes" style="margin-top:6px">
       <button id="btRevisar" class="sec mini">Revisar e liberar de uma vez</button>
+    </div>
+    <div class="acoes" style="margin-top:6px">
+      <button id="btSemLacuna" class="sec mini">Desligar o maluco de quem ficou sem lacuna</button>
+    </div>
+    <div class="acoes" style="margin-top:6px">
+      <button id="btCopiar" class="sec mini">Copiar tudo para eu revisar com o Claude</button>
     </div>
     <div id="relatorio"></div>
   </aside>
@@ -685,10 +691,21 @@ function validar() {
 async function salvar(aprovado) {
   if (!validar()) { toast("Resolva os pontos em vermelho."); return; }
   const m = modos(), texto = palavras.join(" ");
+  const ref = $("ref").value.trim(), jor = $("jornada").value;
+  let alvoId = atual ? atual.id : null;
+  if (!alvoId) {
+    const jaExiste = lista.find(v => v.jornada_id === jor && v.ref.toLowerCase() === ref.toLowerCase());
+    if (jaExiste) {
+      if (!confirm(`${ref} já está cadastrado nesta jornada.\n\nQuer substituir o que está lá pelo que você preencheu agora?`)) {
+        toast("Nada foi alterado."); return;
+      }
+      alvoId = jaExiste.id;
+    }
+  }
   const registro = {
-    id: atual ? atual.id : await novoId(),
-    jornada_id: $("jornada").value,
-    ref: $("ref").value.trim(),
+    id: alvoId || await novoId(),
+    jornada_id: jor,
+    ref,
     texto, dificuldade: +$("dif").value, modos: m,
     lacunas: [...lacunas.entries()].sort((a, b) => a[0] - b[0])
       .map(([pos, categoria]) => ({ pos, categoria, palavra: limpar(palavras[pos]), original: palavras[pos] })),
@@ -702,7 +719,12 @@ async function salvar(aprovado) {
     aprovado
   };
   const { error } = await sb.from("pv_versiculos").upsert(registro);
-  if (error) { toast("Não salvou: " + error.message); return; }
+  if (error) {
+    toast(error.message.includes("duplicate key")
+      ? "Já existe outro versículo com essa referência nesta jornada."
+      : "Não salvou: " + error.message);
+    return;
+  }
   toast(aprovado ? "Liberado para o jogo." : "Rascunho salvo.");
   await carregarLista();
   atual = lista.find(v => v.id === registro.id) || null;
@@ -722,7 +744,7 @@ $("btRevisar").onclick = () => {
   pl.classList.remove("oculto");
   if (!pend.length) { pl.innerHTML = `<p class="dica">Nada pendente — está tudo liberado.</p>`; return; }
   pl.innerHTML = `<h2 style="margin:6px 0 4px">${pend.length} versículo(s) para conferir</h2>
-    <p class="dica">As palavras em dourado são as lacunas do Versículo maluco. Desmarque o que não quiser liberar.</p>
+    <p class="dica">Marcado = <b>liberar agora</b>. Desmarcar não apaga nada; o versículo apenas continua fora do jogo.</p>
     ${pend.map(v => {
       const pal = v.texto.split(" ");
       const marc = new Set((v.lacunas || []).map(l => l.pos));
@@ -753,6 +775,39 @@ $("btRevisar").onclick = () => {
     await carregarLista();
     $("btRevisar").click();
   };
+};
+
+/* ---------- higiene: modo maluco sem lacuna nao pode existir ---------- */
+$("btSemLacuna").onclick = async () => {
+  const quebrados = lista.filter(v => v.modos.includes("maluco") && !(v.lacunas || []).length);
+  if (!quebrados.length) { toast("Nenhum versículo nessa situação."); return; }
+  if (!confirm(`${quebrados.length} versículo(s) estão marcados como Versículo maluco sem nenhuma lacuna.\n\n` +
+      `Desligar esse modo neles? Continuam valendo para os outros dois jogos.`)) return;
+  for (const v of quebrados) {
+    await sb.from("pv_versiculos").update({ modos: v.modos.filter(m => m !== "maluco") }).eq("id", v.id);
+  }
+  await carregarLista();
+  toast(quebrados.length + " ajustado(s).");
+};
+
+/* ---------- exportar para revisão externa ---------- */
+$("btCopiar").onclick = async () => {
+  const txt = lista.map(v => {
+    const pal = v.texto.split(" ");
+    const lac = (v.lacunas || []).map(l => `${l.palavra} (${l.categoria})`).join("; ") || "NENHUMA";
+    const q = v.quem_disse ? `${v.quem_disse.personagem} → ${v.quem_disse.a_quem || ""}` : "—";
+    return `${v.id} | ${v.ref} | ${v.aprovado ? "no jogo" : "pendente"}\n${v.texto}\nmodos: ${v.modos.join(",")}\nlacunas: ${lac}\nquem: ${q}`;
+  }).join("\n\n");
+  try {
+    await navigator.clipboard.writeText(txt);
+    toast("Copiado. Cole na conversa com o Claude.");
+  } catch (e) {
+    const t = document.createElement("textarea");
+    t.value = txt; t.style.cssText = "width:100%;height:220px;margin-top:12px";
+    $("painelLote").classList.remove("oculto");
+    $("painelLote").innerHTML = `<p class="dica">Selecione tudo abaixo e copie:</p>`;
+    $("painelLote").appendChild(t); t.select();
+  }
 };
 
 $("btSalvar").onclick = () => salvar(false);
