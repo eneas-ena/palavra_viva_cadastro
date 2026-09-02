@@ -111,7 +111,7 @@ legend{font-size:12px;font-weight:600;color:var(--tinta-2);padding:0 6px}
 <body>
 
 <header>
-  <h1>Palavra <span>Viva</span> — cadastro <small style="font-family:-apple-system,sans-serif;font-size:11px;font-weight:400;color:#7D8AA3;letter-spacing:0">v. 01/09 22h10</small></h1>
+  <h1>Palavra <span>Viva</span> — cadastro <small style="font-family:-apple-system,sans-serif;font-size:11px;font-weight:400;color:#7D8AA3;letter-spacing:0">v. 01/09 22h35</small></h1>
   <div style="display:flex;align-items:center;gap:14px">
     <div id="estado">desconectado</div>
     <button id="btBiblia" class="sec mini oculto">Bíblia: —</button>
@@ -164,6 +164,9 @@ legend{font-size:12px;font-weight:600;color:var(--tinta-2);padding:0 6px}
     </div>
     <div class="acoes" style="margin-top:6px">
       <button id="btCopiar" class="sec mini">Copiar tudo para eu revisar com o Claude</button>
+    </div>
+    <div class="acoes" style="margin-top:14px">
+      <button id="btGerar">Gerar versículos novos</button>
     </div>
     <div id="relatorio"></div>
   </aside>
@@ -821,6 +824,127 @@ $("btCopiar").onclick = async () => {
     $("painelLote").appendChild(t); t.select();
   }
 };
+
+/* ---------- motor: gerar versículos novos ---------- */
+$("btGerar").onclick = () => {
+  const c = JSON.parse(localStorage.getItem("pv_cfg") || "{}");
+  const pl = $("painelLote");
+  pl.classList.remove("oculto");
+  pl.innerHTML = `<h2 style="margin:6px 0 4px">Gerar versículos novos</h2>
+    <p class="dica">Escreva as referências, uma por linha (ex.: Salmos 23:1). O texto vem da
+      ${$("versao").selectedOptions[0] ? $("versao").selectedOptions[0].textContent : "versão escolhida"},
+      e a IA devolve as lacunas, o contexto e os distratores. Tudo entra como pendente.</p>
+    <label for="refs">Referências</label>
+    <textarea id="refs" rows="8" style="font-family:inherit;font-size:14px"
+      placeholder="Salmos 23:1&#10;Provérbios 3:5&#10;Filipenses 4:13"></textarea>
+    <div class="faixa">
+      <div><label for="gJornada">Jornada de destino</label>
+        <select id="gJornada">${jornadas.map(j => `<option value="${j.id}">${j.nome}</option>`).join("")}</select></div>
+      <div><label for="wurl">Endereço do Worker</label>
+        <input type="text" id="wurl" value="${c.wUrl || ""}" placeholder="https://....workers.dev"></div>
+      <div><label for="wtok">Senha do Worker</label>
+        <input type="text" id="wtok" value="${c.wTok || ""}"></div>
+    </div>
+    <div class="acoes"><button id="btRodar">Gerar</button>
+      <button id="btFechaGer" class="sec">Fechar</button></div>
+    <div id="saidaGer"></div>`;
+  $("btFechaGer").onclick = () => pl.classList.add("oculto");
+  $("btRodar").onclick = rodarGerador;
+};
+
+async function rodarGerador() {
+  const refs = $("refs").value.split("\n").map(r => r.trim()).filter(Boolean);
+  const wUrl = $("wurl").value.trim(), wTok = $("wtok").value.trim();
+  const jor = $("gJornada").value;
+  const saida = $("saidaGer");
+  if (!refs.length) { toast("Escreva ao menos uma referência."); return; }
+  if (!wUrl || !wTok) { toast("Falta o endereço ou a senha do Worker."); return; }
+  if (!bib) { toast("O banco da Bíblia não está conectado."); return; }
+
+  const c = JSON.parse(localStorage.getItem("pv_cfg") || "{}");
+  c.wUrl = wUrl; c.wTok = wTok; localStorage.setItem("pv_cfg", JSON.stringify(c));
+
+  saida.innerHTML = `<p class="dica">Buscando os textos…</p>`;
+  const itens = [], falhas = [];
+  for (const ref of refs) {
+    const r = await buscarTexto(ref);
+    if (r.erro) falhas.push(`${ref} — ${r.erro}`); else itens.push({ ref, texto: r.texto });
+  }
+  if (!itens.length) { saida.innerHTML = falhas.map(f => `<p class="dica">${f}</p>`).join(""); return; }
+
+  saida.innerHTML = `<p class="dica">${itens.length} texto(s) encontrado(s). Anotando com a IA…</p>`;
+  let resp;
+  try {
+    const r = await fetch(wUrl, {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ token: wTok, itens })
+    });
+    resp = await r.json();
+  } catch (e) { saida.innerHTML = `<p class="dica">Não alcancei o Worker: ${e.message}</p>`; return; }
+  if (resp.erro) { saida.innerHTML = `<p class="dica">${resp.erro}</p>`; return; }
+
+  const linhas = [];
+  for (const a of (resp.anotacoes || [])) {
+    const it = itens.find(i => i.ref.toLowerCase() === (a.ref || "").toLowerCase());
+    if (!it) { linhas.push([a.ref || "?", "a IA devolveu uma referência que eu não pedi", false]); continue; }
+    const pal = it.texto.split(" ");
+
+    // valida as lacunas contra o texto verdadeiro
+    const lac = [];
+    for (const l of (a.lacunas || [])) {
+      const alvo = nz(l.palavra);
+      const pos = pal.findIndex((w, j) => nz(limpar(w)) === alvo && !lac.some(x => x.pos === j));
+      if (pos >= 0) lac.push({ pos, categoria: l.categoria, palavra: limpar(pal[pos]), original: pal[pos] });
+    }
+    lac.sort((x, y) => x.pos - y.pos);
+    const comMaluco = lac.length >= 2;
+
+    // valida o quem disse
+    let qd = a.quem_disse || null;
+    if (qd) {
+      const d = qd.distratores || {};
+      const bom = ["facil", "medio", "dificil"].every(n =>
+        Array.isArray(d[n]) && d[n].filter(Boolean).length === 3 &&
+        new Set(d[n]).size === 3 && !d[n].includes(qd.personagem));
+      if (!bom || !qd.personagem) qd = null;
+    }
+
+    // blocos pela pontuação
+    const blocos = []; let atual = [], desde = 0;
+    pal.forEach((p, i) => {
+      atual.push(p);
+      if (i < pal.length - 1 && ",;:.".includes(p[p.length - 1]) && i - desde >= 3) {
+        blocos.push(atual.join(" ")); atual = []; desde = i;
+      }
+    });
+    if (atual.length) blocos.push(atual.join(" "));
+
+    const modos = [];
+    if (comMaluco) modos.push("maluco");
+    if (qd) modos.push("quem");
+    if (pal.length >= 6) modos.push("ordem");
+    if (!modos.length) { linhas.push([it.ref, "não rendeu nenhum modo de jogo", false]); continue; }
+
+    const base = jor.split("-").map(p => p[0]).join("");
+    const usados = lista.filter(v => v.id.startsWith(base + "-")).map(v => +v.id.split("-")[1] || 0);
+    const novo = `${base}-${String((usados.length ? Math.max(...usados) : 0) + 1 + linhas.length).padStart(3, "0")}`;
+
+    const { error } = await sb.from("pv_versiculos").upsert({
+      id: novo, jornada_id: jor, ref: it.ref, texto: it.texto,
+      dificuldade: a.dificuldade || 2, modos, lacunas: lac, blocos,
+      quem_disse: qd, aprovado: false, origem: "ia"
+    }, { onConflict: "jornada_id,ref" });
+
+    linhas.push([it.ref, error ? error.message
+      : `${lac.length} lacuna(s) · ${modos.join(", ")}`, !error]);
+  }
+
+  saida.innerHTML = `<p class="dica" style="margin-top:12px"><b>Resultado</b></p>` +
+    falhas.map(f => `<p class="dica" style="color:#8A6D1F">${f}</p>`).join("") +
+    linhas.map(([r, m, ok]) => `<p class="dica" style="color:${ok ? "var(--ok)" : "var(--erro)"}">${r} — ${m}</p>`).join("") +
+    `<p class="dica">Agora use “Revisar e liberar de uma vez” para conferir.</p>`;
+  await carregarLista();
+}
 
 $("btSalvar").onclick = () => salvar(false);
 $("btAprovar").onclick = () => salvar(true);
