@@ -111,7 +111,7 @@ legend{font-size:12px;font-weight:600;color:var(--tinta-2);padding:0 6px}
 <body>
 
 <header>
-  <h1>Palavra <span>Viva</span> — cadastro <small style="font-family:-apple-system,sans-serif;font-size:11px;font-weight:400;color:#7D8AA3;letter-spacing:0">v. 02/09 00h05</small></h1>
+  <h1>Palavra <span>Viva</span> — cadastro <small style="font-family:-apple-system,sans-serif;font-size:11px;font-weight:400;color:#7D8AA3;letter-spacing:0">v. 02/09 08h30</small></h1>
   <div style="display:flex;align-items:center;gap:14px">
     <div id="estado">desconectado</div>
     <button id="btBiblia" class="sec mini oculto">Bíblia: —</button>
@@ -228,6 +228,9 @@ legend{font-size:12px;font-weight:600;color:var(--tinta-2);padding:0 6px}
 
     <fieldset id="fsQuem">
       <legend>Quem disse</legend>
+      <label for="citacao">Frase mostrada no jogo (deixe vazio para o corte automático)</label>
+      <input type="text" id="citacao" placeholder="só a fala, sem o “E Jesus disse:” da frente">
+      <p class="dica" id="previaCit"></p>
       <div class="faixa">
         <div><label for="personagem">Quem falou</label><input type="text" id="personagem" placeholder="Jesus"></div>
         <div><label for="aquem">A quem</label><input type="text" id="aquem" placeholder="a Tomé"></div>
@@ -525,7 +528,7 @@ $("btNovo").onclick = () => { atual = null; limparForm(); desenharLista(); $("re
 function limparForm() {
   $("ref").value = ""; $("texto").value = ""; $("dif").value = "2";
   $("mMaluco").checked = $("mQuem").checked = $("mOrdem").checked = true;
-  $("personagem").value = $("aquem").value = $("contexto").value = "";
+  $("personagem").value = $("aquem").value = $("contexto").value = $("citacao").value = "";
   lacunas = new Map(); cortes = new Set();
   document.querySelectorAll("#dFacil input,#dMedio input,#dDificil input").forEach(i => i.value = "");
   lerTexto();
@@ -540,6 +543,7 @@ function abrir(id) {
   $("mQuem").checked = v.modos.includes("quem");
   $("mOrdem").checked = v.modos.includes("ordem");
   const q = v.quem_disse || {};
+  $("citacao").value = v.citacao || "";
   $("personagem").value = q.personagem || ""; $("aquem").value = q.a_quem || "";
   $("contexto").value = q.contexto || "";
   const niveis = { facil: "dFacil", medio: "dMedio", dificil: "dDificil" };
@@ -656,8 +660,28 @@ function modos() {
   return [$("mMaluco").checked && "maluco", $("mQuem").checked && "quem", $("mOrdem").checked && "ordem"].filter(Boolean);
 }
 
+const NAO_ESCONDER = ["senhor","deus","pai","filho","espirito","santo","cristo","anjo","voz",
+  "ceus","mestre","centuriao","menino","mulher","homem","pastor","pastores","profeta",
+  "discipulo","discipulos","povo","multidao","rei","sumo","sacerdote"];
+
+function fraseDoJogo() {
+  const propria = $("citacao").value.trim();
+  let t = propria || $("texto").value.trim();
+  if (!propria) {
+    const i = t.indexOf(": ");
+    if (i > 0 && t.slice(i + 2).trim().split(" ").length >= 4) t = t.slice(i + 2).trim();
+  }
+  ($("personagem").value || "").split(/[\s(),]+/)
+    .filter(p => p.length > 3 && p[0] === p[0].toUpperCase() && !NAO_ESCONDER.includes(nz(p)))
+    .forEach(p => { t = t.replace(new RegExp("\\b" + p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "gi"), "———"); });
+  return t;
+}
+
 function validar() {
   const erros = [], avisos = [], m = modos();
+  if (m.includes("quem")) {
+    $("previaCit").innerHTML = `O jogador vai ler: <b style="font-family:'Cormorant Garamond',serif;font-size:17px">${fraseDoJogo()}</b>`;
+  } else { $("previaCit").textContent = ""; }
   if (!$("ref").value.trim()) erros.push("Falta a referência.");
   if (!palavras.length) erros.push("Falta o texto do versículo.");
   if (!m.length) erros.push("Escolha ao menos um modo de jogo.");
@@ -715,7 +739,8 @@ async function salvar(aprovado) {
     id: alvoId || await novoId(),
     jornada_id: jor,
     ref,
-    texto, dificuldade: +$("dif").value, modos: m,
+    texto, citacao: $("citacao").value.trim() || null,
+    dificuldade: +$("dif").value, modos: m,
     lacunas: [...lacunas.entries()].sort((a, b) => a[0] - b[0])
       .map(([pos, categoria]) => ({ pos, categoria, palavra: limpar(palavras[pos]), original: palavras[pos] })),
     blocos: m.includes("ordem") ? blocos() : [],
