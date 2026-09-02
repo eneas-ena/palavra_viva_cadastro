@@ -111,7 +111,7 @@ legend{font-size:12px;font-weight:600;color:var(--tinta-2);padding:0 6px}
 <body>
 
 <header>
-  <h1>Palavra <span>Viva</span> — cadastro <small style="font-family:-apple-system,sans-serif;font-size:11px;font-weight:400;color:#7D8AA3;letter-spacing:0">v. 01/09 21h35</small></h1>
+  <h1>Palavra <span>Viva</span> — cadastro <small style="font-family:-apple-system,sans-serif;font-size:11px;font-weight:400;color:#7D8AA3;letter-spacing:0">v. 01/09 22h10</small></h1>
   <div style="display:flex;align-items:center;gap:14px">
     <div id="estado">desconectado</div>
     <button id="btBiblia" class="sec mini oculto">Bíblia: —</button>
@@ -757,7 +757,8 @@ $("btRevisar").onclick = () => {
             <span style="display:block;font-family:'Cormorant Garamond',serif;font-size:19px;line-height:1.5;margin:3px 0 5px">
               ${pal.map((p, i) => marc.has(i)
                 ? `<span style="background:var(--ouro-fraco);border-radius:3px;padding:0 2px">${p}</span>` : p).join(" ")}</span>
-            <span class="dica" style="margin:0">${v.modos.join(" · ")}${q ? " · disse: " + q.personagem : ""}</span>
+            <span class="dica" style="margin:0">${v.modos.join(" · ")}${q ? " · disse: " + q.personagem : ""}
+              · <a href="#" data-excluir="${v.id}" style="color:var(--erro)">excluir</a></span>
           </span></label></div>`;
     }).join("")}
     <div class="acoes">
@@ -765,6 +766,17 @@ $("btRevisar").onclick = () => {
       <button id="btFechaLote" class="sec">Fechar</button>
     </div>`;
   $("btFechaLote").onclick = () => pl.classList.add("oculto");
+  pl.querySelectorAll("[data-excluir]").forEach(a => a.onclick = async e => {
+    e.preventDefault(); e.stopPropagation();
+    const id = a.dataset.excluir;
+    const v = lista.find(x => x.id === id);
+    if (!confirm(`Excluir ${v.ref} de vez do banco?\n\nIsso não pode ser desfeito.`)) return;
+    const { error } = await sb.from("pv_versiculos").delete().eq("id", id);
+    if (error) { toast("Não excluiu: " + error.message); return; }
+    toast(v.ref + " excluído.");
+    await carregarLista();
+    $("btRevisar").click();
+  });
   $("btLiberar").onclick = async () => {
     const ids = [...pl.querySelectorAll(".lote-ck")].filter(c => c.checked).map(c => c.value);
     if (!ids.length) { toast("Nenhum marcado."); return; }
