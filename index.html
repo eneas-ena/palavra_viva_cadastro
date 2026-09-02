@@ -111,7 +111,7 @@ legend{font-size:12px;font-weight:600;color:var(--tinta-2);padding:0 6px}
 <body>
 
 <header>
-  <h1>Palavra <span>Viva</span> — cadastro <small style="font-family:-apple-system,sans-serif;font-size:11px;font-weight:400;color:#7D8AA3;letter-spacing:0">v. 01/09 23h30</small></h1>
+  <h1>Palavra <span>Viva</span> — cadastro <small style="font-family:-apple-system,sans-serif;font-size:11px;font-weight:400;color:#7D8AA3;letter-spacing:0">v. 02/09 00h05</small></h1>
   <div style="display:flex;align-items:center;gap:14px">
     <div id="estado">desconectado</div>
     <button id="btBiblia" class="sec mini oculto">Bíblia: —</button>
@@ -241,13 +241,16 @@ legend{font-size:12px;font-weight:600;color:var(--tinta-2);padding:0 6px}
       </div>
     </fieldset>
 
+    <p class="dica" style="margin:18px 0 0;border-top:1px solid var(--linha);padding-top:12px">
+      Os três botões abaixo agem só no versículo aberto acima. Para liberar vários de uma vez,
+      use “Revisar e liberar de uma vez”, na coluna da esquerda.</p>
     <div id="aviso"></div>
     <div id="painelLote" class="oculto"></div>
 
     <div class="acoes">
-      <button id="btSalvar">Salvar rascunho</button>
-      <button id="btAprovar" class="sec">Salvar e liberar para o jogo</button>
-      <button id="btExcluir" class="perigo mini dir">Excluir</button>
+      <button id="btSalvar">Salvar este versículo</button>
+      <button id="btAprovar" class="sec">Salvar este e liberar</button>
+      <button id="btExcluir" class="perigo mini dir">Excluir este</button>
     </div>
   </section>
 </main>
