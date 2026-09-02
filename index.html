@@ -111,7 +111,7 @@ legend{font-size:12px;font-weight:600;color:var(--tinta-2);padding:0 6px}
 <body>
 
 <header>
-  <h1>Palavra <span>Viva</span> — cadastro <small style="font-family:-apple-system,sans-serif;font-size:11px;font-weight:400;color:#7D8AA3;letter-spacing:0">v. 01/09 22h35</small></h1>
+  <h1>Palavra <span>Viva</span> — cadastro <small style="font-family:-apple-system,sans-serif;font-size:11px;font-weight:400;color:#7D8AA3;letter-spacing:0">v. 01/09 23h00</small></h1>
   <div style="display:flex;align-items:center;gap:14px">
     <div id="estado">desconectado</div>
     <button id="btBiblia" class="sec mini oculto">Bíblia: —</button>
@@ -167,6 +167,9 @@ legend{font-size:12px;font-weight:600;color:var(--tinta-2);padding:0 6px}
     </div>
     <div class="acoes" style="margin-top:14px">
       <button id="btGerar">Gerar versículos novos</button>
+    </div>
+    <div class="acoes" style="margin-top:6px">
+      <button id="btJornadas" class="sec mini">Jornadas</button>
     </div>
     <div id="relatorio"></div>
   </aside>
@@ -824,6 +827,70 @@ $("btCopiar").onclick = async () => {
     $("painelLote").appendChild(t); t.select();
   }
 };
+
+/* ---------- jornadas ---------- */
+const slug = t => nz(t).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 30);
+
+$("btJornadas").onclick = async () => {
+  const pl = $("painelLote");
+  pl.classList.remove("oculto");
+  const { data } = await sb.from("pv_jornadas").select("*").order("ordem");
+  jornadas = data || [];
+  const conta = id => lista.filter(v => v.jornada_id === id).length;
+  pl.innerHTML = `<h2 style="margin:6px 0 4px">Jornadas</h2>
+    <p class="dica">Cada versículo pertence a uma. O <b>Quem disse</b> não usa essa divisão —
+      ele sorteia do acervo inteiro, para o jogador não decorar o autor da jornada.</p>
+    ${jornadas.map(j => `<div style="border-top:1px solid var(--linha);padding:10px 0;display:flex;gap:12px;align-items:center">
+        <span style="width:14px;height:14px;border-radius:4px;background:${j.cor || "#C9A227"}"></span>
+        <span style="flex:1"><b>${j.nome}</b>
+          <span class="dica" style="margin:0">${j.id} · ${conta(j.id)} versículo(s)${j.ativa ? "" : " · desligada"}</span></span>
+        <button class="sec mini" data-jed="${j.id}">Renomear</button>
+        <button class="sec mini" data-jat="${j.id}">${j.ativa ? "Desligar" : "Ligar"}</button>
+      </div>`).join("")}
+    <div style="border-top:1px solid var(--linha);margin-top:10px;padding-top:12px">
+      <label for="jNome">Nova jornada</label>
+      <input type="text" id="jNome" placeholder="Novo Testamento" maxlength="40">
+      <label for="jDesc">Descrição (aparece na tela do jogo)</label>
+      <input type="text" id="jDesc" placeholder="As palavras que atravessaram os Evangelhos e as cartas.">
+      <div class="acoes"><button id="btNovaJ">Criar</button>
+        <button id="btFechaJ" class="sec">Fechar</button></div>
+    </div>`;
+  $("btFechaJ").onclick = () => pl.classList.add("oculto");
+  $("btNovaJ").onclick = async () => {
+    const nome = $("jNome").value.trim();
+    if (!nome) { toast("Escreva o nome."); return; }
+    const id = slug(nome);
+    if (jornadas.some(j => j.id === id)) { toast("Já existe uma jornada com esse nome."); return; }
+    const { error } = await sb.from("pv_jornadas").insert({
+      id, nome, descricao: $("jDesc").value.trim(),
+      ordem: (jornadas.reduce((m, j) => Math.max(m, j.ordem || 0), 0)) + 1
+    });
+    if (error) { toast("Não criou: " + error.message); return; }
+    toast(nome + " criada.");
+    await recarregarJornadas();
+    $("btJornadas").click();
+  };
+  pl.querySelectorAll("[data-jed]").forEach(b => b.onclick = async () => {
+    const j = jornadas.find(x => x.id === b.dataset.jed);
+    const nome = prompt("Novo nome da jornada:", j.nome);
+    if (!nome || !nome.trim()) return;
+    await sb.from("pv_jornadas").update({ nome: nome.trim() }).eq("id", j.id);
+    await recarregarJornadas(); $("btJornadas").click();
+  });
+  pl.querySelectorAll("[data-jat]").forEach(b => b.onclick = async () => {
+    const j = jornadas.find(x => x.id === b.dataset.jat);
+    await sb.from("pv_jornadas").update({ ativa: !j.ativa }).eq("id", j.id);
+    await recarregarJornadas(); $("btJornadas").click();
+  });
+};
+
+async function recarregarJornadas() {
+  const { data } = await sb.from("pv_jornadas").select("id,nome").order("ordem");
+  jornadas = data || [];
+  const atualSel = $("jornada").value;
+  $("jornada").innerHTML = jornadas.map(j => `<option value="${j.id}">${j.nome}</option>`).join("");
+  if (jornadas.some(j => j.id === atualSel)) $("jornada").value = atualSel;
+}
 
 /* ---------- motor: gerar versículos novos ---------- */
 $("btGerar").onclick = () => {
