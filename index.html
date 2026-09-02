@@ -111,7 +111,7 @@ legend{font-size:12px;font-weight:600;color:var(--tinta-2);padding:0 6px}
 <body>
 
 <header>
-  <h1>Palavra <span>Viva</span> — cadastro <small style="font-family:-apple-system,sans-serif;font-size:11px;font-weight:400;color:#7D8AA3;letter-spacing:0">v. 01/09 23h00</small></h1>
+  <h1>Palavra <span>Viva</span> — cadastro <small style="font-family:-apple-system,sans-serif;font-size:11px;font-weight:400;color:#7D8AA3;letter-spacing:0">v. 01/09 23h30</small></h1>
   <div style="display:flex;align-items:center;gap:14px">
     <div id="estado">desconectado</div>
     <button id="btBiblia" class="sec mini oculto">Bíblia: —</button>
@@ -939,16 +939,43 @@ async function rodarGerador() {
   }
   if (!itens.length) { saida.innerHTML = falhas.map(f => `<p class="dica">${f}</p>`).join(""); return; }
 
-  saida.innerHTML = `<p class="dica">${itens.length} texto(s) encontrado(s). Anotando com a IA…</p>`;
-  let resp;
-  try {
-    const r = await fetch(wUrl, {
-      method: "POST", headers: { "content-type": "application/json" },
-      body: JSON.stringify({ token: wTok, itens })
-    });
-    resp = await r.json();
-  } catch (e) { saida.innerHTML = `<p class="dica">Não alcancei o Worker: ${e.message}</p>`; return; }
-  if (resp.erro) { saida.innerHTML = `<p class="dica">${resp.erro}</p>`; return; }
+  // a IA trabalha melhor em lotes pequenos: manda de seis em seis
+  const TAM = 6, anotacoes = [], avisos = [];
+  for (let p = 0; p < itens.length; p += TAM) {
+    const fatia = itens.slice(p, p + TAM);
+    saida.innerHTML = `<p class="dica">Anotando ${p + 1}–${p + fatia.length} de ${itens.length}…</p>`;
+    let bruto = "";
+    try {
+      const r = await fetch(wUrl, {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ token: wTok, itens: fatia })
+      });
+      bruto = await r.text();
+      let resp;
+      try { resp = JSON.parse(bruto); }
+      catch {
+        const html = bruto.trim().startsWith("<");
+        saida.innerHTML = `<p class="dica" style="color:var(--erro)">
+          O Worker respondeu ${r.status} com ${html ? "uma página HTML" : "algo que não é JSON"}.</p>
+          <pre style="white-space:pre-wrap;font-size:12px;background:var(--papel);padding:10px;border-radius:8px;max-height:200px;overflow:auto">${
+            bruto.slice(0, 600).replace(/</g, "&lt;")}</pre>`;
+        return;
+      }
+      if (resp.erro) { avisos.push(`${fatia[0].ref} em diante — ${resp.erro}`); continue; }
+      anotacoes.push(...(resp.anotacoes || []));
+      const faltou = fatia.filter(f => !(resp.anotacoes || []).some(a =>
+        (a.ref || "").toLowerCase() === f.ref.toLowerCase()));
+      faltou.forEach(f => avisos.push(`${f.ref} — a IA não devolveu; rode de novo só esta`));
+    } catch (e) {
+      avisos.push(`${fatia[0].ref} em diante — não alcancei o Worker: ${e.message}`);
+    }
+  }
+  if (!anotacoes.length) {
+    saida.innerHTML = avisos.map(a => `<p class="dica" style="color:var(--erro)">${a}</p>`).join("");
+    return;
+  }
+  const resp = { anotacoes };
+  falhas.push(...avisos);
 
   const linhas = [];
   for (const a of (resp.anotacoes || [])) {
