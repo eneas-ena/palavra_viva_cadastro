@@ -111,7 +111,7 @@ legend{font-size:12px;font-weight:600;color:var(--tinta-2);padding:0 6px}
 <body>
 
 <header>
-  <h1>Palavra <span>Viva</span> — cadastro <small style="font-family:-apple-system,sans-serif;font-size:11px;font-weight:400;color:#7D8AA3;letter-spacing:0">v. 02/09 08h30</small></h1>
+  <h1>Palavra <span>Viva</span> — cadastro <small style="font-family:-apple-system,sans-serif;font-size:11px;font-weight:400;color:#7D8AA3;letter-spacing:0">v. 04/10 23h50</small></h1>
   <div style="display:flex;align-items:center;gap:14px">
     <div id="estado">desconectado</div>
     <button id="btBiblia" class="sec mini oculto">Bíblia: —</button>
@@ -122,9 +122,9 @@ legend{font-size:12px;font-weight:600;color:var(--tinta-2);padding:0 6px}
 <section id="config" class="painel">
   <h2>Entrar</h2>
   <label for="cfgUrl">URL do projeto</label>
-  <input type="text" id="cfgUrl" placeholder="https://xxxxxxxx.supabase.co">
+  <input type="text" id="cfgUrl" value="https://ghjbljypxksubmcsvaig.supabase.co" readonly>
   <label for="cfgKey">Chave publicável (sb_publishable_… ou anon)</label>
-  <input type="text" id="cfgKey" placeholder="sb_publishable_...">
+  <input type="text" id="cfgKey" value="sb_publishable_qXCYqg1WdmelY9D1mptZXg_U8NdoKby" readonly>
   <label for="cfgEmail">Seu e-mail</label>
   <input type="text" id="cfgEmail" autocomplete="username">
   <label for="cfgSenha">Senha</label>
@@ -280,6 +280,10 @@ if (!window.supabase || !window.supabase.createClient) {
     "Não consegui carregar a biblioteca do Supabase. Verifique a conexão com a internet e recarregue a página.";
 }
 var _criar = window.supabase ? window.supabase.createClient : null;
+/* 04/10: banco do Palavra Viva agora no projeto quiz-biblico, schema palavra_viva */
+const PV_URL = "https://ghjbljypxksubmcsvaig.supabase.co";
+const PV_KEY = "sb_publishable_qXCYqg1WdmelY9D1mptZXg_U8NdoKby";
+const PV_OPCOES = { db: { schema: "palavra_viva" } };
 var _clientes = {};
 function createClient(url, key, opts) {
   var chave = url + "|" + ((opts && opts.db && opts.db.schema) || "public");
@@ -323,20 +327,20 @@ $("btSair").onclick = async () => { if (sb) await sb.auth.signOut(); location.re
 async function retomarSessao() {
   const salvo = JSON.parse(localStorage.getItem("pv_cfg") || "null");
   if (!salvo) return;
-  $("cfgUrl").value = salvo.url; $("cfgKey").value = salvo.key;
+  $("cfgUrl").value = PV_URL; $("cfgKey").value = PV_KEY;
   $("cfgEmail").value = salvo.email || "";
   $("cfgBibUrl").value = salvo.bUrl || ""; $("cfgBibKey").value = salvo.bKey || "";
-  sb = createClient(salvo.url, salvo.key);
+  sb = createClient(PV_URL, PV_KEY, PV_OPCOES);
   const { data } = await sb.auth.getSession();
   if (data.session) await iniciar(); else $("cfgSenha").focus();
 }
 
 async function entrar() {
-  const url = $("cfgUrl").value.trim(), key = $("cfgKey").value.trim();
+  const url = PV_URL, key = PV_KEY;
   const email = $("cfgEmail").value.trim(), senha = $("cfgSenha").value;
   const bUrl = $("cfgBibUrl").value.trim(), bKey = $("cfgBibKey").value.trim();
   if (!url || !key || !email || !senha) { toast("Preencha os quatro campos de cima."); return; }
-  sb = createClient(url, key);
+  sb = createClient(url, key, PV_OPCOES);
   const { error } = await sb.auth.signInWithPassword({ email, password: senha });
   if (error) { toast("Não entrou: " + error.message); return; }
   localStorage.setItem("pv_cfg", JSON.stringify({ url, key, email, bUrl, bKey }));
