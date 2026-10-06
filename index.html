@@ -111,7 +111,7 @@ legend{font-size:12px;font-weight:600;color:var(--tinta-2);padding:0 6px}
 <body>
 
 <header>
-  <h1>Palavra <span>Viva</span> — cadastro <small style="font-family:-apple-system,sans-serif;font-size:11px;font-weight:400;color:#7D8AA3;letter-spacing:0">v. 04/10 23h50</small></h1>
+  <h1>Palavra <span>Viva</span> — cadastro <small style="font-family:-apple-system,sans-serif;font-size:11px;font-weight:400;color:#7D8AA3;letter-spacing:0">v. 05/10 · Bíblia nova</small></h1>
   <div style="display:flex;align-items:center;gap:14px">
     <div id="estado">desconectado</div>
     <button id="btBiblia" class="sec mini oculto">Bíblia: —</button>
@@ -370,6 +370,7 @@ function diagnostico(txt) {
 
 async function ligarBiblia() {
   const c = JSON.parse(localStorage.getItem("pv_cfg") || "{}");
+  c.bUrl = PV_URL; c.bKey = PV_KEY;   /* 05/10: a Bíblia agora mora no mesmo projeto (quiz-biblico) */
   $("btBiblia").classList.remove("oculto");
   bib = null;
   $("versao").innerHTML = `<option>—</option>`;
